@@ -375,6 +375,52 @@ for sentence in sentences:
 
 #+end_src
 
+#+results:
+#+begin_example
+Tokens: ['The', 'cheerful', 'black', 'dog', 'slept', 'quietly', 'by', 'the', 'chair']
+(S
+  (NP (D The) (A cheerful) (A black) (N dog))
+  (VP (V slept) (AV quietly) (P by) (NP (D the) (N chair))))
+                         S                            
+        _________________|____________                 
+       |                              VP              
+       |                  ____________|_______         
+       NP                |      |     |       NP      
+  _____|____________     |      |     |    ___|____    
+ D     A       A    N    V      AV    P   D        N  
+ |     |       |    |    |      |     |   |        |   
+The cheerful black dog slept quietly  by the     chair
+
+Tokens: ['A', 'sleepy', 'yellow', 'dog', 'stretched', 'his', 'back']
+(S
+  (NP (D A) (A sleepy) (A yellow) (N dog))
+  (VP (V stretched) (NP (D his) (N back))))
+                   S                        
+       ____________|_____________            
+      |                          VP         
+      |                    ______|___        
+      NP                  |          NP     
+  ____|____________       |       ___|___    
+ D    A      A     N      V      D       N  
+ |    |      |     |      |      |       |   
+ A  sleepy yellow dog stretched his     back
+
+Tokens: ['Somebody', 'downstairs', 'made', 'the', 'coffee']
+(S
+  (NP (D Somebody) (A downstairs))
+  (VP (V made) (NP (D the) (N coffee))))
+                         S                 
+           ______________|____              
+          |                   VP           
+          |               ____|___          
+          NP             |        NP       
+    ______|______        |     ___|____     
+   D             A       V    D        N   
+   |             |       |    |        |    
+Somebody     downstairs made the     coffee
+
+#+end_example
+
 
 The parser is successfuly generating trees for all of the sentences, and it identifies noun phrases, verb phrases,
 and other componentes like prepositional phrases. It finds adverbs and determiners as well. By expanding the grammer to include all
@@ -411,7 +457,7 @@ different ways to use a verb. The parser was able to pick up those different str
   """)
 
   # create a chart parser
-  chart_parser = nltk.ChartParser(grammar)
+  chart_parser = nltk.RecursiveDescentParser(grammar)
 
   # sentences to parse
   sentences = [
@@ -547,6 +593,11 @@ for sentence, time_taken in findings:
 
 #+end_src
 
+#+results:
+: Sentence: 'We had a long walk to the park and Vinny played with three other dogs.' took 1.1222 seconds to parse 1000 times.
+: Sentence: 'It was sunny today but might not be tomorrow.' took 0.6089 seconds to parse 1000 times.
+: Sentence: 'There are 49 angels dancing on the head of this pin.' took 1.0108 seconds to parse 1000 times.
+
 
 | Sentence                                                               | Time (seconds) |
 |------------------------------------------------------------------------+----------------|
@@ -612,6 +663,67 @@ just photograph it and include the image below, as is done in [[file:../notes.or
       + Fido barks.
       + Tess barks.
 
+#+begin_src python :results output
+
+  from nltk.sem import *
+  from nltk import load_parser
+  from nltk.grammar import FeatureGrammar
+  from nltk.parse.featurechart import FeatureChartParser
+
+  file_path = "/Users/michaelhackmann/Desktop/7740-hw2/sem2.fcfg"
+
+  parser = load_parser(file_path, trace=0)
+
+  sentences = [
+    "Suzie sees Noosa",
+    "Fido barks",
+    "Tess barks"
+  ]
+
+  for sentence in sentences:
+    sentence_copy = sentence.split()
+    print(f"Sentence: {sentence}")
+    trees = list(parser.parse(sentence_copy))
+    for tree in trees:
+      print(tree)
+      print(tree.label()['SEM'])
+
+#+end_src
+
+#+results:
+#+begin_example
+Sentence: Suzie sees Noosa
+(S[SEM=<see(suzie,noosa)>]
+  (NP[-LOC, NUM='sg', SEM=<\P.P(suzie)>]
+    (PropN[-LOC, NUM='sg', SEM=<\P.P(suzie)>] Suzie))
+  (VP[NUM='sg', SEM=<\y.see(y,noosa)>]
+    (TV[NUM='sg', SEM=<\X y.X(\x.see(y,x))>, TNS='pres'] sees)
+    (NP[+LOC, NUM='sg', SEM=<\P.P(noosa)>]
+      (PropN[+LOC, NUM='sg', SEM=<\P.P(noosa)>] Noosa))))
+see(suzie,noosa)
+Sentence: Fido barks
+(S[SEM=<bark(fido)>]
+  (NP[-LOC, NUM='sg', SEM=<\P.P(fido)>]
+    (PropN[-LOC, NUM='sg', SEM=<\P.P(fido)>] Fido))
+  (VP[NUM='sg', SEM=<\x.bark(x)>]
+    (IV[NUM='sg', SEM=<\x.bark(x)>, TNS='pres'] barks)))
+bark(fido)
+Sentence: Tess barks
+(S[SEM=<bark(Tess)>]
+  (NP[-LOC, NUM='sg', SEM=<\P.P(Tess)>]
+    (PropN[-LOC, NUM='sg', SEM=<\P.P(Tess)>] Tess))
+  (VP[NUM='sg', SEM=<\x.bark(x)>]
+    (IV[NUM='sg', SEM=<\x.bark(x)>, TNS='pres'] barks)))
+bark(Tess)
+#+end_example
+
+Analysis: The parse worked correctly, and the semantics are visible as
+well. "Suzie sees Noosa" and "Fido Barks" came out correctly, and the
+semantic breakdown see(suzie,noosa) and bark(fido) show that the domain
+contains all the need stuff, or other words, the domain of discourse
+contains our information. The last sentence didn't work, because the name
+"Tess" wasn't in the doman. I downloaded the sem2.fcfg file on my local
+machine and added it, and that fixed that problem.
 
 
 
