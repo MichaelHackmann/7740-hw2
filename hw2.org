@@ -343,25 +343,48 @@ RULE 9: P (prep) -> "by"
 
 #+begin_src python :results output
 import nltk
-from nltk.tree import Tree
+from nltk import CFG
 
-# define the grammar rules
-grammar_rules = {
-    'S': [['NP', 'VP']],
-    'NP': [['D', 'A'], ['D', 'A', 'A', 'N'], ['N'], ['D', 'N']],
-    'VP': [['V', 'NP'], ['V', 'AV', 'PP']],
-    'PP': [['P', 'NP']],
-    'D': ['the', 'The', 'A', 'Somebody', 'Some', 'His'],
-    'A': ['cheerful', 'sleepy', 'yellow', 'black', 'downstairs'],
-    'N': ['dog', 'chair', 'back', 'coffee'],
-    'V': ['slept', 'stretched', 'made'],
-    'AV': ['quietly'],
-    'P': ['by'],
-}
+# define the grammar
+grammar = CFG.fromstring("""
+S -> NP VP
+NP -> D A | D A A N | D N
+VP -> V NP | V AV P NP
+PP -> P NP
+D -> 'the' | 'The' | 'A' | 'Somebody' | 'Some' | 'his'
+A -> 'cheerful' | 'sleepy' | 'yellow' | 'black' | 'downstairs'
+N -> 'dog' | 'chair' | 'back' | 'coffee'
+V -> 'slept' | 'stretched' | 'made'
+AV -> 'quietly'
+P -> 'by'
+""")
+
+sentences = [
+    "The cheerful black dog slept quietly by the chair",
+    "A sleepy yellow dog stretched his back",
+    "Somebody downstairs made the coffee"
+  ]
+
+for sentence in sentences:
+    tokens = sentence.split()
+    print("Tokens:", tokens)
+    parser = nltk.RecursiveDescentParser(grammar)
+    for tree in parser.parse(tokens):
+        print(tree)
+        tree.pretty_print()
 
 #+end_src
 
 
+The parser is successfuly generating trees for all of the sentences, and it identifies noun phrases, verb phrases,
+and other componentes like prepositional phrases. It finds adverbs and determiners as well. By expanding the grammer to include all
+of the words, the parser can handle a big variety of sentence structure. I had to include 'his' to make sure it covered that case.
+Before I did, it raised an error stating that some vocabulary was missing and needed to be identified. The parser seems to be
+flexible and can generate trees from different types of sentence formats. That was a big takeaway that I had. All of the sentences
+start with a similar structue of S -> NP and VP. They start with a noun phrase followed by a verb phrase. The cheerful black dog
+had to account for miltiple adjectives modifying the noun. The sentence with someone making cofee only takes one adjective. This shows
+the grammer can handle both simple and complex noun phrases. The verb phrases are very different. quietly, and stretched, made, are all
+different ways to use a verb. The parser was able to pick up those different structures. 
 
 
 8. <<chart-parser>> Following on, implement the grammar of question
@@ -472,23 +495,66 @@ Somebody     downstairs made the     coffee
    + sentence 6 :: ``There are 49 angels dancing on the head of this pin.''
 
 #+begin_src python :results output
+import time
+import nltk
+from nltk import CFG
+import re
+
+def punctuation_fix(sentence):
+    return re.findall(r"\w+|[^\w\s]", sentence) #https://www.codecademy.com/resources/docs/python/regex/findall
+
 grammar = CFG.fromstring("""
-    S -> NP VP | S CONJ S 
-    NP -> D A | D A A N | D N | N | D N P NP | NUM N | N PP | D N PP | D A N
-    VP -> V NP | V AV P NP | V NP PP | V ADVP  
+    S -> NP VP | S CONJ S
+    NP -> D A N | D A A N | D N | N | D N PP | NUM N | N PP | D N PP | N PP
+    VP -> V NP | V AV P NP | V NP PP | V ADVP
     PP -> P NP
-    ADVP -> AV | AV ADVP 
-    D -> 'The' | 'the' | 'a' | 'A' | 'Somebody' | 'Some' | 'his' | 'We' | 'It' | 'There' | 'this' 
-    A -> 'cheerful' | 'sleepy' | 'other' | 'yellow' | 'black' | 'downstairs' | 'long' | 'sunny'  
-    N -> 'dog' | 'pin.' | 'head' | 'dogs.' | 'Vinny' | 'chair' | 'back' | 'coffee' | 'walk' | 'park' | 'angels' | 'pin' 
-    V -> 'was' | 'might' | 'are' | 'be' | 'slept' | 'stretched' | 'made' | 'had' | 'played' | 'dancing'  
-    AV -> 'not' | 'tomorrow.' | 'quietly' | 'today' | 'tomorrow' 
-    P -> 'by' | 'of' | 'to' | 'on' | 'with'  
-    NUM -> '49' | 'three' 
-    CONJ -> 'and' | 'but'  
+    ADVP -> AV | AV ADVP
+    D -> 'The' | 'the' | 'A' | 'a' | 'Somebody' | 'Some' | 'his' | 'We' | 'It' | 'There' | 'this'
+    A -> 'cheerful' | 'sleepy' | 'yellow' | 'black' | 'downstairs' | 'long' | 'sunny' | 'other'
+    N -> 'dog' | 'dogs' | 'Vinny' | 'chair' | 'back' | 'coffee' | 'walk' | 'park' | 'angels' | 'head' | 'pin'
+    V -> 'slept' | 'stretched' | 'made' | 'had' | 'played' | 'was' | 'might' | 'be' | 'are' | 'dancing'
+    AV -> 'quietly' | 'today' | 'tomorrow' | 'not'
+    P -> 'by' | 'with' | 'to' | 'on' | 'of'
+    NUM -> '49' | 'three'
+    CONJ -> 'and' | 'but'
+    PUNCT -> '.' | ',' | '!'
 """)
 
+# Sentences to parse
+sentences = [
+    "We had a long walk to the park and Vinny played with three other dogs.",
+    "It was sunny today but might not be tomorrow.",
+    "There are 49 angels dancing on the head of this pin."
+]
+
+def parse_sentence(sentence, parser, iterations=1000):
+    tokens = punctuation_fix(sentence)
+    time_begin = time.time()
+    for _ in range(iterations):
+        list(parser.parse(tokens))  
+    time_end = time.time()
+    return time_end - time_begin
+
+chart_parser = nltk.ChartParser(grammar)
+
+findings = []
+for sentence in sentences:
+    time_taken = parse_sentence(sentence, chart_parser)
+    findings.append((sentence, time_taken))
+
+for sentence, time_taken in findings:
+    print(f"Sentence: '{sentence}' took {time_taken:.4f} seconds to parse 1000 times.")
+
 #+end_src
+
+
+| Sentence                                                               | Time (seconds) |
+|------------------------------------------------------------------------+----------------|
+| We had a long walk to the park and Vinny played with three other dogs. |         1.3391 |
+| It was sunny today but might not be tomorrow.                          |         0.7393 |
+| There are 49 angels dancing on the head of this pin.                   |         1.2394 |
+
+
 
 
 
@@ -507,6 +573,9 @@ grammar = CFG.fromstring("""
 #
 Draw the corresponding directed acyclic graph, ideally in Python.  (A hand-drawn figure is fine:
 just photograph it and include the image below, as is done in [[file:../notes.org][notes.org]].)
+
+
+
 
 11. [@11] <<basic-fea-struc>> Now extend your grammar from question [[clock]] to include features
     relevant to subject-verb agreement, using =nltk.FeatStruct()= from
