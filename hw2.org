@@ -198,18 +198,24 @@ P = {C -> A B
 #+END_EXAMPLE
 Is the grammar left-, right-, neither-, or both-recursive?  Why?
 
-+ I believe the grammar is neither-recursive, because in the production
-  rules none of of the non-terminals reappear on the lefthand and righthand
-  sides. There is no recursive outcome. 
++ I believe the grammar is neither left or right recursive. A grammar is left recursive
+  if a non terminal appears on the far left side of its production.
+  Right recursion appears on the far right of its production. In the case of this problem
+  none of the non terminals, A,B,C, or D reappear on the lefthand and righthand
+  sides. Therefore, there is no recursive outcome. 
 
 
 3. [@3] <<manual-parse>> By hand, generate a construct for each unique
    length of output using the grammar of question [[which-recursn]] and show
    them and their derivation as an =org= table:
 
-| sentence        | rule sequence and comments                                |
-|-----------------+-----------------------------------------------------------|
-| foo bar |
+| sentence        | rule sequence and comments                                        |
+|-----------------+-------------------------------------------------------------------|
+| foo bar         | C → A B → T B → T A → foo B → foo A D → foo bar                   |
+| foo foo bar     | C → A B → T B → T D → foo D → foo A A → foo foo bar               |
+| bar foo         | C → A B → T B → T A → bar B → bar A → bar foo                     |
+| foo foo foo bar | C → A B → T B → T D → foo D → foo A A → foo A A → foo foo foo bar |
+
 
 
 # clarified they are not to write more complex productn rules, 
@@ -240,8 +246,9 @@ Is the grammar left-, right-, neither-, or both-recursive?  Why?
         |___dog DUCK$ -> rule 5
 
 
-As you can see, this tree identifies all the terminals. Because all the
-strings start with either EGO or black, those begin the tree branches. From
+As you can see, this tree identifies all the terminals by using their regular expressions to
+distinguish them. Each regex designes to match a pattern in the input strings.
+Because all of the strings start with either EGO or black, those begin the tree branches. From
 there they all branch off either to NEED or to DOG, and in the case of
 "black" it could branch off to "dog DUCK". So by following the branches of
 the tree based off the string in question, you will ifnd out what rule of
@@ -253,38 +260,38 @@ code of question 5.
    question [[regex]] and show the code and results.
 
 #+begin_src python :results output
-import re
+  import re
 
-# define regex patterns for each rule
-patterns = {
-    "Rule 1/2": r'^EGO NEED DUCK$',       # matches both Rule 1 and Rule 2
-    "Rule 3": r'^EGO dog DUCK$',           # matches Rule 3
-    "Rule 4": r'^EGO dog DUCK squirrel$',  # matches Rule 4
-    "Rule 5": r'^black dog DUCK$',         # matches Rule 5
-}
+  # define regex patterns for each rule
+  patterns = {
+      "Rule 1/2": r'^EGO NEED DUCK$',       # matches both Rule 1 and Rule 2
+      "Rule 3": r'^EGO dog DUCK$',           # matches Rule 3
+      "Rule 4": r'^EGO dog DUCK squirrel$',  # matches Rule 4
+      "Rule 5": r'^black dog DUCK$',         # matches Rule 5
+  }
 
-# function to match input against the regex tree
-def match_rule(sequence):
-    for rule, pattern in patterns.items():
-        if re.match(pattern, sequence):
-            return rule
-    return "No match"
+  # function to match input against the regex tree
+  def match_rule(sequence):
+      for rule, pattern in patterns.items():
+	  if re.match(pattern, sequence):
+	      return rule
+      return "No match"
 
-# test cases
-test_sequences = [
-    "EGO NEED DUCK",         # rule 1/2
-    "EGO dog DUCK",          # rule 3
-    "EGO dog DUCK squirrel", # rule 4
-    "black dog DUCK",        # rule 5
-    "EGO NEED DUCK"          # rule 1/2
-]
+  # test cases
+  test_sequences = [
+      "EGO NEED DUCK",         # rule 1/2
+      "EGO dog DUCK",          # rule 3
+      "EGO dog DUCK squirrel", # rule 4
+      "black dog DUCK",        # rule 5
+      "EGO NEED DUCK"          # rule 1/2
+  ]
 
-# running the matcher and showing results
-results = {seq: match_rule(seq) for seq in test_sequences}
+  # running the matcher and showing results
+  results = {seq: match_rule(seq) for seq in test_sequences}
 
-# display results
-for seq, result in results.items():
-    print(f"Sequence: '{seq}' -> {result}")
+  # display results
+  for seq, result in results.items():
+      print(f"Sequence: '{seq}' -> {result}")
 
 #+end_src
 
@@ -316,20 +323,22 @@ RULE 8: V (verb) -> "slept" | "stretched" | "made"
 RULE 9: AV (adverb) -> "quietly" 
 RULE 9: P (prep) -> "by"
 #
-| rule                | phrase                                                                                                                                 |   |
-|---------------------+----------------------------------------------------------------------------------------------------------------------------------------+---|
-| S $\rightarrow$ A B | ( foo bar barbar )                                                                                                                     |   |
-| S > NP VP           | ( The cheerful black dog slept quietly by the chair )( A sleepy yellow dog stretched his back )( Somebody downstairs made the coffee ) |   |
-| NP > D A            | ( Somebody downstairs )                                                                                                                |   |
-| NP > D A A N        | ( The cheerful black dog ) ( A sleepy yellow dog )                                                                                     |   |
-| VP > V NP           | ( stretched his back) (made the coffee)                                                                                                |   |
-| VP > V AV PP        | ( slept quietly by the chair)                                                                                                          |   |
-| PP > P NP           | ( by the chair)                                                                                                                        |   |
-| D                   | ( the )( The )( A )( Somebody )( his )                                                                                                 |   |
-| A                   | ( cheerful )( sleepy )( yellow )( black )( downstairs )                                                                                |   |
-| N                   | ( dog )( chair )( back )( coffee )                                                                                                     |   |
-| V                   | ( slept )( stretched )( made )                                                                                                         |   |
-| P                   | ( by )                                                                                                                                 |   |
+
+| Rule                | Phrase                                                                                                                        |
+|---------------------+-------------------------------------------------------------------------------------------------------------------------------|
+| S → NP VP           | (The cheerful black dog slept quietly by the chair)                                                                            |
+| S → NP VP           | (A sleepy yellow dog stretched his back)                                                                                       |
+| S → NP VP           | (Somebody downstairs made the coffee)                                                                                         |
+| NP → D A N          | (The cheerful black dog)                                                                                                      |
+| NP → D A A N        | (A sleepy yellow dog)                                                                                                         |
+| VP → V NP           | (stretched his back)                                                                                                          |
+| VP → V AV PP        | (slept quietly by the chair)                                                                                                   |
+| PP → P NP           | (by the chair)                                                                                                                |
+| D                   | (the) (The) (A) (Somebody) (Some) (His)                                                                                       |
+| A                   | (cheerful) (sleepy) (yellow) (black) (downstairs)                                                                            |
+| N                   | (dog) (chair) (back) (coffee)                                                                                                |
+| V                   | (slept) (stretched) (made)                                                                                                     |
+| P                   | (by)                                                                                                                                  |   |
 
 # added pretty printing, so much easier to follow
 #
@@ -722,7 +731,7 @@ well. "Suzie sees Noosa" and "Fido Barks" came out correctly, and the
 semantic breakdown see(suzie,noosa) and bark(fido) show that the domain
 contains all the need stuff, or other words, the domain of discourse
 contains our information. The last sentence didn't work, because the name
-"Tess" wasn't in the doman. I downloaded the sem2.fcfg file on my local
+"Tess" wasn't in the domain. I downloaded the sem2.fcfg file on my local
 machine and added it, and that fixed that problem.
 
 
