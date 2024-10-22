@@ -466,7 +466,7 @@ different ways to use a verb. The parser was able to pick up those different str
   """)
 
   # create a chart parser
-  chart_parser = nltk.RecursiveDescentParser(grammar)
+  chart_parser = nltk.ChartParser(grammar)
 
   # sentences to parse
   sentences = [
@@ -539,6 +539,11 @@ Somebody     downstairs made the     coffee
 
 #+end_example
 
+From the charts themselves, I actually don't notice any difference.
+They appear to be the same, and I don't know if that's because of pretty
+print formatting or because the outputs of the parse are truly
+identical. It could be the way the two parsing methods are programmed in
+NLTK, but here they come out identical. 
 
 9. <<clock>> Extend your grammar for the sentences in question
    [[recur-desc-parser]]  so that it can parse sentences 4--6 below.  Time the
@@ -603,9 +608,9 @@ for sentence, time_taken in findings:
 #+end_src
 
 #+results:
-: Sentence: 'We had a long walk to the park and Vinny played with three other dogs.' took 1.1222 seconds to parse 1000 times.
-: Sentence: 'It was sunny today but might not be tomorrow.' took 0.6089 seconds to parse 1000 times.
-: Sentence: 'There are 49 angels dancing on the head of this pin.' took 1.0108 seconds to parse 1000 times.
+: Sentence: 'We had a long walk to the park and Vinny played with three other dogs.' took 1.0871 seconds to parse 1000 times.
+: Sentence: 'It was sunny today but might not be tomorrow.' took 0.6154 seconds to parse 1000 times.
+: Sentence: 'There are 49 angels dancing on the head of this pin.' took 1.0496 seconds to parse 1000 times.
 
 
 | Sentence                                                               | Time (seconds) |
@@ -635,6 +640,11 @@ Draw the corresponding directed acyclic graph, ideally in Python.  (A hand-drawn
 just photograph it and include the image below, as is done in [[file:../notes.org][notes.org]].)
 
 
+                 |---SUBJ--sg-->NUM
+PER <--3---AGR<--|
+                 |---Head<------CAT
+
+
 
 
 11. [@11] <<basic-fea-struc>> Now extend your grammar from question [[clock]] to include features
@@ -645,7 +655,120 @@ just photograph it and include the image below, as is done in [[file:../notes.or
 
    + sentence 7 :: ``The black dogs are playing with the elf toy.''
    + sentence 8 :: ``The yellow dog slept in my pajamas.''
-   + sentence 9 :: ``We will take two long rides in the country next week.''
+   + sentence 9 :: ``We will take two long rides in the country next
+     week.''
+
+#+begin_src python :results output
+import nltk
+from nltk import FeatureChartParser
+from nltk import CFG
+import re
+from nltk.grammar import FeatureGrammar
+import matplotlib.pyplot as plt
+from nltk.draw.tree import TreeView
+from nltk.tree import Tree
+
+def punctuation_fix(sentence):
+  return re.findall(r"\w+|[^\w\s]", sentence)
+
+grammar = nltk.grammar.FeatureGrammar.fromstring("""
+    S[NUM=?n, PER=?p] -> NP[NUM=?n, PER=?p] VP[NUM=?n, PER=?p]
+                      | S[NUM=?n, PER=?p] CONJ S[NUM=?n, PER=?p]
+
+    NP[NUM=sg, PER=3] -> D A N[NUM=sg, PER=3]
+    NP[NUM=pl, PER=3] -> D A N[NUM=pl, PER=3]
+    NP[NUM=sg, PER=1] -> 'I'
+    NP[NUM=pl, PER=1] -> 'We'
+    NP[NUM=pl, PER=3] -> D N[NUM=pl, PER=3]
+
+    VP[NUM=sg, PER=3] -> V[NUM=sg, PER=3] NP | V[NUM=sg, PER=3] PP | V[NUM=sg, PER=3] AV P NP
+    VP[NUM=pl, PER=3] -> V[NUM=pl, PER=3] NP | V[NUM=pl, PER=3] PP | V[NUM=pl, PER=3] AV P NP
+    VP[NUM=pl, PER=1] -> 'will' V[NUM=pl, PER=3] NP
+
+    PP -> P NP
+
+    D -> 'The' | 'the' | 'A' | 'a' | 'Somebody' | 'Some' | 'his' | 'We' | 'It' | 'There' | 'this' | 'my'
+    A -> 'black' | 'cheerful' | 'sleepy' | 'yellow' | 'long' | 'sunny' | 'other'
+    N[NUM=sg, PER=3] -> 'dog' | 'toy' | 'elf' | 'ride' | 'country' | 'week' | 'pajamas' | 'child'
+    N[NUM=pl, PER=3] -> 'dogs' | 'toys' | 'angels'
+
+    V[NUM=sg, PER=3] -> 'sleeps' | 'plays' | 'sees' | 'is' | 'was' | 'might' | 'has' | 'barks'
+    V[NUM=pl, PER=3] -> 'are' | 'play' | 'take' | 'dancing' | 'sees'
+
+    AV -> 'quietly' | 'today' | 'tomorrow' | 'not'
+    P -> 'by' | 'with' | 'to' | 'on' | 'of' | 'in' | 'next'
+    CONJ -> 'and' | 'but'
+""")
+
+
+sentences = [
+  "The cheerful black dog slept quietly by the chair",
+  "A sleepy yellow dog stretched his back",
+  "Somebody downstairs made the coffee",
+  "We had a long walk to the park and Vinny played with three other dogs",
+  "It was sunny today but might not be tomorrow",
+  "There are 49 angels dancing on the head of this pin",
+  "The black dogs are playing with the elf toy",
+  "The yellow dog slept in my pajamas",
+  "We will take two long rides in the country next week",
+]
+cp = FeatureChartParser(grammar)
+def punctuation_fix(sentence):
+    return re.findall(r"\w+|[^\w\s]", sentence)
+
+
+for sentence in sentences:
+  print(f"Parsing: {sentence}")
+  parsed_tree = cp.parse(sentence.split())
+  print(parsed_tree)
+  for tree in parsed_tree:
+    print(tree)
+    tree.draw()  
+#+end_src
+
+#+results:
+#+begin_example
+Parsing: The cheerful black dog slept quietly by the chair
+<generator object FeatureChart.parses at 0x111e77e20>
+(S[]
+  (NP[NUM='sg']
+    (D[NUM='sg'] The)
+    (A[] cheerful)
+    (A[] black)
+    (N[NUM='sg'] dog))
+  (VP[NUM='sg']
+    (V[NUM='sg'] slept)
+    (AV[] quietly)
+    (P[] by)
+    (NP[NUM='sg'] (D[NUM='sg'] the) (N[NUM='sg'] chair))))
+Parsing: A sleepy yellow dog stretched his back
+<generator object FeatureChart.parses at 0x111e77c40>
+(S[]
+  (NP[NUM='sg']
+    (D[NUM='sg'] A)
+    (A[] sleepy)
+    (A[] yellow)
+    (N[NUM='sg'] dog))
+  (VP[NUM='sg']
+    (V[NUM='sg'] stretched)
+    (NP[NUM='sg'] (D[NUM='sg'] his) (N[NUM='sg'] back))))
+Parsing: Somebody downstairs made the coffee
+<generator object FeatureChart.parses at 0x111e77d30>
+Parsing: We had a long walk to the park and Vinny played with three other dogs
+<generator object FeatureChart.parses at 0x111e77f10>
+Parsing: It was sunny today but might not be tomorrow
+<generator object FeatureChart.parses at 0x111e77d30>
+Parsing: There are 49 angels dancing on the head of this pin
+<generator object FeatureChart.parses at 0x111e77c40>
+Parsing: The black dogs are playing with the elf toy
+<generator object FeatureChart.parses at 0x111e77d30>
+Parsing: The yellow dog slept in my pajamas
+<generator object FeatureChart.parses at 0x111e77c40>
+Parsing: We will take two long rides in the country next week
+<generator object FeatureChart.parses at 0x111e77d30>
+#+end_example
+
+
 
 12. [@12] <<fopc>> [[../../reading/blk_2nd_ed.pdf][Chapter 10 of BLK]] and [[http://www.nltk.org/howto/semantics.html][the semantics howto]] march one through the basics
    of applying the FOPC and the \lambda calculus to reifying the semantics of
