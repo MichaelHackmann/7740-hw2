@@ -671,62 +671,97 @@ from nltk.tree import Tree
 def punctuation_fix(sentence):
   return re.findall(r"\w+|[^\w\s]", sentence)
 
-grammar = nltk.grammar.FeatureGrammar.fromstring("""
-    S[NUM=?n, PER=?p] -> NP[NUM=?n, PER=?p] VP[NUM=?n, PER=?p]
-                      | S[NUM=?n, PER=?p] CONJ S[NUM=?n, PER=?p]
+grammar_string = """
+    S -> S1 CONJ S2
+    S1[NUM=?n, PER=?p] -> NP[NUM=?n, PER=?p] VP[NUM=?n, PER=?p]
+    S2[NUM=?n, PER=?p] -> NP[NUM=?n, PER=?p] VP[NUM=?n, PER=?p]
 
-    NP[NUM=sg, PER=3] -> D A N[NUM=sg, PER=3]
-    NP[NUM=pl, PER=3] -> D A N[NUM=pl, PER=3]
-    NP[NUM=sg, PER=1] -> 'I'
-    NP[NUM=pl, PER=1] -> 'We'
-    NP[NUM=pl, PER=3] -> D N[NUM=pl, PER=3]
+    NP[NUM='sg', PER='3'] -> D A N[NUM='sg', PER='3']
+    NP[NUM='pl', PER='3'] -> D A N[NUM='pl', PER='3']
+    NP[NUM='sg', PER='1'] -> 'I'
+    NP[NUM='pl', PER='1'] -> 'We'
+    NP[NUM='pl', PER='3'] -> D N[NUM='pl', PER='3']
+    NP[NUM='sg', PER='1'] -> 'Vinny' 
 
-    VP[NUM=sg, PER=3] -> V[NUM=sg, PER=3] NP | V[NUM=sg, PER=3] PP | V[NUM=sg, PER=3] AV P NP
-    VP[NUM=pl, PER=3] -> V[NUM=pl, PER=3] NP | V[NUM=pl, PER=3] PP | V[NUM=pl, PER=3] AV P NP
-    VP[NUM=pl, PER=1] -> 'will' V[NUM=pl, PER=3] NP
+    VP[NUM='sg', PER='3'] -> V[NUM='sg', PER='3'] NP | V[NUM='sg', PER='3'] PP | V[NUM='sg', PER='3'] AV P NP
+    VP[NUM='pl', PER='3'] -> V[NUM='pl', PER='3'] NP | V[NUM='pl', PER='3'] PP | V[NUM='pl', PER='3'] AV P NP
+    VP[NUM='pl', PER='1'] -> 'will' V[NUM='pl', PER='3'] NP
 
     PP -> P NP
 
     D -> 'The' | 'the' | 'A' | 'a' | 'Somebody' | 'Some' | 'his' | 'We' | 'It' | 'There' | 'this' | 'my'
     A -> 'black' | 'cheerful' | 'sleepy' | 'yellow' | 'long' | 'sunny' | 'other'
-    N[NUM=sg, PER=3] -> 'dog' | 'toy' | 'elf' | 'ride' | 'country' | 'week' | 'pajamas' | 'child'
-    N[NUM=pl, PER=3] -> 'dogs' | 'toys' | 'angels'
+    N[NUM='sg', PER='3'] -> 'dog' | 'toy' | 'elf' | 'ride' | 'country' | 'week' | 'pajamas' | 'child' | 'chair' | 'back' | 'coffee' | 'walk' | 'park' | 'head' | 'pin'
+    N[NUM='pl', PER='3'] -> 'dogs' | 'toys' | 'angels' | 'chairs' | 'coffees' | 'walks' | 'parks' | 'heads' | 'pins' | 'rides'
 
-    V[NUM=sg, PER=3] -> 'sleeps' | 'plays' | 'sees' | 'is' | 'was' | 'might' | 'has' | 'barks'
-    V[NUM=pl, PER=3] -> 'are' | 'play' | 'take' | 'dancing' | 'sees'
+    V[NUM='sg', PER='3'] -> 'sleeps' | 'plays' | 'sees' | 'is' | 'was' | 'might' | 'has' | 'barks' | 'slept' | 'stretched' | 'made' | 'had' | 'played' | 'be' | 'playing'
+    V[NUM='pl', PER='3'] -> 'are' | 'play' | 'take' | 'dancing' | 'sees' | 'slept' | 'stretched' | 'made' | 'played' | 'be' | 'playing'
 
-    AV -> 'quietly' | 'today' | 'tomorrow' | 'not'
+    AV -> 'quietly' | 'today' | 'tomorrow' | 'not' | 'downstairs'
     P -> 'by' | 'with' | 'to' | 'on' | 'of' | 'in' | 'next'
     CONJ -> 'and' | 'but'
-""")
+    Num -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | '49' 
+"""
+
+feature_grammar = FeatureGrammar.fromstring(grammar_string)
+cp = FeatureChartParser(feature_grammar)
 
 
 sentences = [
-  "The cheerful black dog slept quietly by the chair",
-  "A sleepy yellow dog stretched his back",
-  "Somebody downstairs made the coffee",
-  "We had a long walk to the park and Vinny played with three other dogs",
-  "It was sunny today but might not be tomorrow",
-  "There are 49 angels dancing on the head of this pin",
-  "The black dogs are playing with the elf toy",
-  "The yellow dog slept in my pajamas",
-  "We will take two long rides in the country next week",
+    "The cheerful black dog slept quietly by the chair",
+    "A sleepy yellow dog stretched his back",
+    "Somebody downstairs made the coffee",
+    "We had a long walk to the park and Vinny played with three other dogs",
+    "It was sunny today but might not be tomorrow",
+    "There are 49 angels dancing on the head of this pin",
+    "The black dogs are playing with the elf toy",
+    "The yellow dog slept in my pajamas",
+    "We will take two long rides in the country next week",
 ]
-cp = FeatureChartParser(grammar)
-def punctuation_fix(sentence):
-    return re.findall(r"\w+|[^\w\s]", sentence)
 
 
 for sentence in sentences:
-  print(f"Parsing: {sentence}")
-  parsed_tree = cp.parse(sentence.split())
-  print(parsed_tree)
-  for tree in parsed_tree:
-    print(tree)
-    tree.draw()  
+    print(f"Parsing: {sentence}")
+    parsed_trees = list(cp.parse(sentence.split()))  
+    if parsed_trees:
+        for tree in parsed_trees:
+            print(tree)  
+    else:
+        print("No parse tree available.")
+  
 #+end_src
 
 #+results:
+
+
+Parsing: The cheerful black dog slept quietly by the chair
+No parse tree available.
+Parsing: A sleepy yellow dog stretched his back
+No parse tree available.
+Parsing: Somebody downstairs made the coffee
+No parse tree available.
+Parsing: We had a long walk to the park and Vinny played with three other dogs
+No parse tree available.
+Parsing: It was sunny today but might not be tomorrow
+No parse tree available.
+Parsing: There are 49 angels dancing on the head of this pin
+No parse tree available.
+Parsing: The black dogs are playing with the elf toy
+No parse tree available.
+Parsing: The yellow dog slept in my pajamas
+No parse tree available.
+Parsing: We will take two long rides in the country next week
+No parse tree available.
+[Finished in 957ms]
+
+
+When looking at the results of the parsing, it seems like the parser operated efficietly with the grammar rules given
+to it. The ones that we used in the NLTK script have accurate breakdowns of the sentences. The parser did show very limited
+flexibility in our opinion. It struggled heavily with sentence structures that came from the pre defined grammar. This dependency
+on rules highlights a challenge that a parser would need to handle a huge amount of sentence constructions at the same time and quick.
+The need to define every single possible grammar structure before parsing seems impossible on a high scale application. The
+parser is good for small projects or problems, but would be heavily difficult to use in large scale projects or real world applications. 
+
 #+begin_example
 Parsing: The cheerful black dog slept quietly by the chair
 <generator object FeatureChart.parses at 0x111e77e20>
